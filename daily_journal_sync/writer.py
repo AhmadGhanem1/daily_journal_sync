@@ -3,7 +3,7 @@ from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from pathlib import Path
 import subprocess
-
+import os
 from . import config
 from . import weather as weather_mod
 
@@ -67,15 +67,49 @@ class JournalWriter:
             f.write(line)
         self._logger.info("Appended note (%d bytes)", len(line.encode("utf-8")))
 
+
+
+
+
     def _maybe_trigger_push(self, md_path: Path):
-        """Check file size and later trigger git push."""
-        size = md_path.stat().st_size
+        """Check file size and fork a child process to run push.sh if >= 10 KB."""
+        try:
+            size = md_path.stat().st_size
+        except FileNotFoundError:
+            return
+
         if size >= config.MAX_MD_SIZE_BYTES:
-            self._logger.info(
-                "Threshold reached (%d bytes) — would trigger git push (Step 3)",
-                size
-            )
-            # Step 3: subprocess.Popen(["/bin/bash", str(self.repo / "push.sh")], cwd=self.repo)
+            self._logger.info("File size %d ≥ threshold — forking push.sh", size)
+            push_script = self.repo / "push.sh"
+            if not push_script.exists():
+                self._logger.warning("push.sh not found — skipping git push")
+                return
+
+            try:
+                pid = os.fork()  # 🔹 fork a child process
+                if pid == 0:
+                    # child executes push.sh
+                    os.execv("/bin/bash", ["/bin/bash", str(push_script)])
+                else:
+                    self._logger.info("Forked child PID %d to run push.sh", pid)
+            except OSError as e:
+                self._logger.error("Fork failed: %s", e)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def run(self):
         """Main loop reading from the queue and writing to files."""
