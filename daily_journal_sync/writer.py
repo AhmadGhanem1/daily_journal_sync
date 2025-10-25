@@ -72,7 +72,7 @@ class JournalWriter:
 
 
     def _maybe_trigger_push(self, md_path: Path):
-        """Check file size and fork a child process to run push.sh if >= 10 KB."""
+        """check file size and fork a child process to run push.sh if >= 10 KB."""
         try:
             size = md_path.stat().st_size
         except FileNotFoundError:
@@ -97,27 +97,13 @@ class JournalWriter:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def run(self):
-        """Main loop reading from the queue and writing to files."""
-        self._logger.info("Writer loop started.")
+        """the main loop reading from the queue and writing to files."""
+        self._logger.info("writer loop started.")
         while True:
             message = self.queue.get()  # blocks until a message arrives
             if message is None:
-                self._logger.info("Shutdown signal received.")
+                self._logger.info("shutdown signal received.")
                 break
             try:
                 md_path = self._today_md_path()
@@ -125,5 +111,5 @@ class JournalWriter:
                 self._append_note(md_path, message)
                 self._maybe_trigger_push(md_path)
             except Exception as e:
-                self._logger.exception("Failed to process message: %s", e)
-        self._logger.info("Writer loop exited.")
+                self._logger.exception("failed to process message: %s", e)
+        self._logger.info("writer loop exited.")
